@@ -11,7 +11,7 @@ import (
 )
 
 func Test_getElements(t *testing.T) {
-	baseDir := ""
+	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
 	tests := []struct {
 		name     string
 		path     string
@@ -282,4 +282,69 @@ func readTestFile() (*image.Image, error) {
 		return nil, err
 	}
 	return &decoded, nil
+}
+
+func TestGenService_getElements(t *testing.T) {
+	basePath := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
+	type fields struct {
+		Elements    Elements
+		Image       *image.RGBA
+		ImageLayers []image.Image
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		path    string
+		wantRes []Element
+		wantErr bool
+	}{
+		{
+			name: "Happy Path",
+			fields: fields{
+				Elements:    Elements{},
+				Image:       nil,
+				ImageLayers: nil,
+			},
+			path:    basePath,
+			wantErr: false,
+			wantRes: []Element{
+				{
+					Id:       0,
+					Name:     "Blue Green ",
+					FileName: "Blue Green #50.png",
+					Weight:   50,
+					Path:     fmt.Sprintf("%v/Blue Green #50.png", basePath),
+				}, {
+					Id:       1,
+					Name:     "Cadet Blue ",
+					FileName: "Cadet Blue #50.png",
+					Weight:   50,
+					Path:     fmt.Sprintf("%v/Cadet Blue #50.png", basePath),
+				}, {
+					Id:       2,
+					Name:     "Cadet Blue ",
+					FileName: "Cadet Blue #60.png",
+					Weight:   60,
+					Path:     fmt.Sprintf("%v/Cadet Blue #60.png", basePath),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &GenService{
+				Elements:    tt.fields.Elements,
+				Image:       tt.fields.Image,
+				ImageLayers: tt.fields.ImageLayers,
+			}
+			gotRes, err := s.getElements(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRes, tt.wantRes) {
+				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
 }

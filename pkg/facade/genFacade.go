@@ -217,6 +217,7 @@ func (s *GenService) getElements(path string) (res []Element, err error) {
 		}
 		return nil
 	})
+
 	if err != nil {
 		return res, err
 	}
@@ -224,7 +225,6 @@ func (s *GenService) getElements(path string) (res []Element, err error) {
 	str2, _ := regexp.Compile(".DS_Store")
 	for i, item := range items {
 		if !str1.MatchString(item.Name()) && !str2.MatchString(item.Name()) {
-
 			res = append(res, Element{
 				Id:       i,
 				Name:     cleanName(item.Name()),

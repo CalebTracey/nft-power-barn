@@ -1,0 +1,74 @@
+{
+    "Name": "Spooky Head Club",
+    "Description": "Collection of generative NFTs",
+    "FileUrl": "https://test.com",
+    "CustomFields": {
+        "DNA": "0cf66e927a6a9858008e92e63f8346e015364e14",
+        "Edition": 8,
+        "Date": "2022 January 3",
+        "Compiler": "Caleb's NFT Power Barn"
+    },
+    "Creator": "Caleb T",
+    "Attributes": [
+        {
+            "Trait type": "Background Color",
+            "Value": "Blue Green"
+        },
+        {
+            "Trait type": "Background Noise",
+            "Value": "None"
+        },
+        {
+            "Trait type": "Background Aura",
+            "Value": "Red Aura"
+        },
+        {
+            "Trait type": "Face Color",
+            "Value": "4"
+        },
+        {
+            "Trait type": "Face Texture",
+            "Value": "Galaxy 1"
+        },
+        {
+            "Trait type": "Eye Type",
+            "Value": "White Eyes"
+        },
+        {
+            "Trait type": "Eye Color",
+            "Value": "Green"
+        },
+        {
+            "Trait type": "Pupil Type",
+            "Value": "Dizzy"
+        },
+        {
+            "Trait type": "Upper Eyelids",
+            "Value": "Upper Lid P2 5"
+        },
+        {
+            "Trait type": "Lower Eyelids",
+            "Value": "Lower Lid P2 3"
+        },
+        {
+            "Trait type": "Nose",
+            "Value": "Nose Ring 1"
+        },
+        {
+            "Trait type": "Mouth",
+            "Value": "Neutral Open 2"
+        },
+        {
+            "Trait type": "Head Accessory",
+            "Value": "None"
+        },
+        {
+            "Trait type": "Face Accessory",
+            "Value": "Purple Pink Eye Lantern"
+        },
+        {
+            "Trait type": "Mouth Accessory",
+            "Value": "None"
+        }
+    ]
+}

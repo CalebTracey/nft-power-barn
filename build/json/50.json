@@ -1,0 +1,74 @@
+{
+    "Name": "Spooky Head Club",
+    "Description": "Collection of generative NFTs",
+    "FileUrl": "https://test.com",
+    "CustomFields": {
+        "DNA": "a509ede878a2ae3fac5235151b54caffc724ffb5",
+        "Edition": 50,
+        "Date": "2022 January 3",
+        "Compiler": "Caleb's NFT Power Barn"
+    },
+    "Creator": "Caleb T",
+    "Attributes": [
+        {
+            "Trait type": "Background Color",
+            "Value": "Outer Aura 13"
+        },
+        {
+            "Trait type": "Background Noise",
+            "Value": "None"
+        },
+        {
+            "Trait type": "Background Aura",
+            "Value": "Purple Aura"
+        },
+        {
+            "Trait type": "Face Color",
+            "Value": "4"
+        },
+        {
+            "Trait type": "Face Texture",
+            "Value": "Abstract 13"
+        },
+        {
+            "Trait type": "Eye Type",
+            "Value": "Pink Eyes"
+        },
+        {
+            "Trait type": "Eye Color",
+            "Value": "Bue"
+        },
+        {
+            "Trait type": "Pupil Type",
+            "Value": "Round"
+        },
+        {
+            "Trait type": "Upper Eyelids",
+            "Value": "Upper Lid P2 1"
+        },
+        {
+            "Trait type": "Lower Eyelids",
+            "Value": "None"
+        },
+        {
+            "Trait type": "Nose",
+            "Value": "Nose Ring 2"
+        },
+        {
+            "Trait type": "Mouth",
+            "Value": "Neutral Open 3"
+        },
+        {
+            "Trait type": "Head Accessory",
+            "Value": "Dark Blue Beanie"
+        },
+        {
+            "Trait type": "Face Accessory",
+            "Value": "Green Eye Lantern"
+        },
+        {
+            "Trait type": "Mouth Accessory",
+            "Value": "None"
+        }
+    ]
+}

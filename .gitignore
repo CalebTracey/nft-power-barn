@@ -1,5 +1,6 @@
 .DS_Store
 
 /layers/
-/pkg/facade/testdata/
 /build/
+/build/images/
+/build/json/

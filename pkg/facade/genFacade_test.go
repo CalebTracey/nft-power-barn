@@ -11,7 +11,7 @@ import (
 )
 
 func Test_getElements(t *testing.T) {
-	baseDir := "gitlab.com/CalebTracey/nft-power-barn/pkg/facade/testdata/layers"
+	baseDir := ""
 	tests := []struct {
 		name     string
 		path     string

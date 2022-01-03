@@ -10,60 +10,61 @@ import (
 	"testing"
 )
 
-func Test_getElements(t *testing.T) {
-	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
-	tests := []struct {
-		name     string
-		path     string
-		elements *Elements
-		wantRes  []Element
-		wantErr  bool
-	}{
-		{
-			name:     "Happy Path",
-			path:     baseDir,
-			elements: &Elements{},
-			wantErr:  false,
-			wantRes: []Element{
-				{
-					Id:       0,
-					Name:     "Blue Green ",
-					FileName: "Blue Green #50.png",
-					Weight:   50,
-					Path:     fmt.Sprintf("%v/Blue Green #50.png", baseDir),
-				}, {
-					Id:       1,
-					Name:     "Cadet Blue ",
-					FileName: "Cadet Blue #50.png",
-					Weight:   50,
-					Path:     fmt.Sprintf("%v/Cadet Blue #50.png", baseDir),
-				}, {
-					Id:       2,
-					Name:     "Cadet Blue ",
-					FileName: "Cadet Blue #60.png",
-					Weight:   60,
-					Path:     fmt.Sprintf("%v/Cadet Blue #60.png", baseDir),
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &GenService{
-				Elements: *tt.elements,
-			}
-			gotRes, err := s.getElements(tt.path)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotRes, tt.wantRes) {
-				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
-			}
-		})
-	}
-}
+//
+//func Test_getElements(t *testing.T) {
+//	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
+//	tests := []struct {
+//		name     string
+//		build     string
+//		elements *Elements
+//		wantRes  []Element
+//		wantErr  bool
+//	}{
+//		{
+//			name:     "Happy Path",
+//			build:     baseDir,
+//			elements: &Elements{},
+//			wantErr:  false,
+//			wantRes: []Element{
+//				{
+//					Id:       0,
+//					Name:     "Blue Green ",
+//					FileName: "Blue Green #50.png",
+//					Weight:   50,
+//					Path:     fmt.Sprintf("%v/Blue Green #50.png", baseDir),
+//				}, {
+//					Id:       1,
+//					Name:     "Cadet Blue ",
+//					FileName: "Cadet Blue #50.png",
+//					Weight:   50,
+//					Path:     fmt.Sprintf("%v/Cadet Blue #50.png", baseDir),
+//				}, {
+//					Id:       2,
+//					Name:     "Cadet Blue ",
+//					FileName: "Cadet Blue #60.png",
+//					Weight:   60,
+//					Path:     fmt.Sprintf("%v/Cadet Blue #60.png", baseDir),
+//				},
+//			},
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			s := &GenService{
+//				Elements: *tt.elements,
+//			}
+//			gotRes, err := s.getElements(tt.build)
+//
+//			if (err != nil) != tt.wantErr {
+//				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
+//				return
+//			}
+//			if !reflect.DeepEqual(gotRes, tt.wantRes) {
+//				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
+//			}
+//		})
+//	}
+//}
 
 func Test_getRarityWeight(t *testing.T) {
 	tests := []struct {
@@ -285,7 +286,8 @@ func readTestFile() (*image.Image, error) {
 }
 
 func TestGenService_getElements(t *testing.T) {
-	basePath := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
+	wd, _ := os.Getwd()
+	basePath := fmt.Sprintf("%v/test", wd)
 	type fields struct {
 		Elements    Elements
 		Image       *image.RGBA
@@ -313,19 +315,19 @@ func TestGenService_getElements(t *testing.T) {
 					Name:     "Blue Green ",
 					FileName: "Blue Green #50.png",
 					Weight:   50,
-					Path:     fmt.Sprintf("%v/Blue Green #50.png", basePath),
+					Path:     fmt.Sprintf("%v/test/Blue Green #50.png", basePath),
 				}, {
 					Id:       1,
 					Name:     "Cadet Blue ",
 					FileName: "Cadet Blue #50.png",
 					Weight:   50,
-					Path:     fmt.Sprintf("%v/Cadet Blue #50.png", basePath),
+					Path:     fmt.Sprintf("%v/test/Cadet Blue #50.png", basePath),
 				}, {
 					Id:       2,
 					Name:     "Cadet Blue ",
 					FileName: "Cadet Blue #60.png",
 					Weight:   60,
-					Path:     fmt.Sprintf("%v/Cadet Blue #60.png", basePath),
+					Path:     fmt.Sprintf("%v/test/Cadet Blue #60.png", basePath),
 				},
 			},
 		},

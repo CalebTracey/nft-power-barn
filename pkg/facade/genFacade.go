@@ -29,7 +29,7 @@ const (
 )
 
 var buildDir, layersDir, rarityDelimiter, dnaDelimiter string
-var editionCount, failedCount, uniqueDnaTorrence, layerConfigIdx int
+var editionCount, failedCount, uniqueDnaTorrence, layerConfigIdx, ignoredCount int
 var metadataSlice []Metadata
 var attributesList map[int][]Attributes
 var dnaList map[int]string
@@ -55,9 +55,19 @@ func init() {
 	if err != nil {
 		log.Println(err.Error())
 	}
+
 	buildDir = fmt.Sprintf("%v/build", path)
+	err = resetBuildDirectory(fmt.Sprintf("%v/json", buildDir))
+	fatality(err)
+	err = resetBuildDirectory(fmt.Sprintf("%v/images", buildDir))
+	fatality(err)
+
 	layersDir = fmt.Sprintf("%v/layers", path)
+
 	rand.Seed(time.Now().UnixNano())
+	ig := config.IgnoredData()
+	ignoredCount += len(ig.Values)
+	ignoredCount += len(ig.Traits)
 
 	metadataSlice = make([]Metadata, 0)
 	dnaList = make(map[int]string)
@@ -107,18 +117,17 @@ func (s *GenService) StartCreating() {
 				results := constructLayerToDna(newDna, s.Elements.layers)
 				dna, err := dnaHash(newDna)
 				fatality(err)
-
 				addAttributes(results, editionCount)
 				addMetadata(dna, abstractedIndexes[0])
+
 				var wg sync.WaitGroup
-				work := make(chan []image.Image)
+				layerCount := len(conf.LayerOrder) - 1
+				work := make(chan []image.Image, layerCount-ignoredCount)
 
 				wg.Add(1)
 				go func() {
 					s.loadImages(work, results)
-
 				}()
-
 				consumer := <-work
 				go func() {
 					defer wg.Done()
@@ -126,14 +135,13 @@ func (s *GenService) StartCreating() {
 						s.drawLayer(consumer[i])
 					}
 				}()
-
 				wg.Wait()
-				go func() {
-					imgErr := saveImageFile(s.Image, editionCount)
-					fatality(imgErr)
-					metaErr := saveMetadata(editionCount)
-					fatality(metaErr)
-				}()
+
+				img := make(chan bool)
+				js := make(chan bool)
+				s.saveNft(abstractedIndexes[0], img, js)
+				<-img
+				<-js
 
 				log.Printf("Created edition: %v, with DNA: %v", abstractedIndexes[0], dna)
 				dnaList[abstractedIndexes[0]] = dna
@@ -154,34 +162,20 @@ func (s *GenService) StartCreating() {
 	log.Printf("Finished in %v seconds", dur)
 }
 
-//
-//func (s *GenService) DoAll(res []LayerToDnaResults, images chan image.Image) {
-//	idx := 0
-//
-//	c := make(chan int)
-//	for i := 0; i < 4; i++ {
-//		go s.DoSome(i*len(s.ImageLayers)/4, (i+1)*4/4, res, c, images)
-//	}
-//	//for i := 0; i < 4; i++ {
-//		idx += <-c
-//
-//	//}
-//}
-//
-//func (s *GenService) DoSome(i, n int, res []LayerToDnaResults, c chan int, images chan image.Image) {
-//	for ; i < n; i++ {
-//		img, err := s.loadLayerImage(res[i])
-//		if err != nil {
-//			fatality(err)
-//		}
-//		if i < len(res) {
-//			images <- img
-//			<- c
-//		}
-//	}
-//
-//	c <- 1 // signal that this piece is done
-//}
+func (s *GenService) saveNft(id int, imageDone chan bool, jsonDone chan bool) {
+	go func() {
+		defer close(imageDone)
+		imgErr := saveImageFile(s.Image, id)
+		fatality(imgErr)
+		imageDone <- true
+	}()
+	go func() {
+		defer close(jsonDone)
+		metaErr := saveMetadata(id)
+		fatality(metaErr)
+		jsonDone <- true
+	}()
+}
 
 func (s *GenService) layersSetup(layers []config.Layer) error {
 	log.Println("Setting up layers...")
@@ -260,11 +254,11 @@ func (s *GenService) loadLayerImage(layer LayerToDnaResults) (image.Image, error
 		Image image.Image
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to load file at path: %v. %v", layer.SelectedElement.Path, err)
+		return nil, fmt.Errorf("failed to load file at build: %v. %v", layer.SelectedElement.Path, err)
 	}
 	decoded, err := png.Decode(img)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode file opened at path: %v. %v", layer.SelectedElement.Path, err)
+		return nil, fmt.Errorf("failed to decode file opened at build: %v. %v", layer.SelectedElement.Path, err)
 	}
 	return decoded, nil
 }
@@ -412,22 +406,21 @@ func saveImageFile(newImg *image.RGBA, edition int) error {
 	fileName := filepath.Join(path, filepath.Base(fmt.Sprintf("/%v.png", strconv.Itoa(edition))))
 
 	outFile, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
 	defer func(outFile *os.File) {
 		err = outFile.Close()
 		if err != nil {
 			return
 		}
 	}(outFile)
+	if err != nil {
+		return err
+	}
 
 	buff := new(bytes.Buffer)
 	err = png.Encode(buff, newImg)
 	if err != nil {
 		return err
 	}
-
 	_, err = outFile.Write(buff.Bytes())
 	if err != nil {
 		return err
@@ -436,7 +429,6 @@ func saveImageFile(newImg *image.RGBA, edition int) error {
 	if err != nil {
 		return err
 	}
-
 	err = outFile.Close()
 	if err != nil {
 		return err
@@ -482,17 +474,17 @@ func saveMetadata(edition int) error {
 
 func saveMetadataFile(m Metadata, edition int) error {
 	path := fmt.Sprintf("%v/json", buildDir)
+
 	outFile, err := os.Create(filepath.Join(path, filepath.Base(fmt.Sprintf("/%v.json", strconv.Itoa(edition)))))
-	if err != nil {
-		return err
-	}
 	defer func(outFile *os.File) {
 		err = outFile.Close()
 		if err != nil {
 			return
 		}
 	}(outFile)
-
+	if err != nil {
+		return err
+	}
 	buff := new(bytes.Buffer)
 	enc := json.NewEncoder(buff)
 	enc.SetIndent("", "    ")
@@ -514,23 +506,15 @@ func saveMetadataFile(m Metadata, edition int) error {
 	return nil
 }
 
-func createMetadataFile(path string, edition int) (*os.File, error) {
-	outFile, err := os.Create(filepath.Join(path, filepath.Base(fmt.Sprintf("%v.json", strconv.Itoa(edition)))))
+func writeFullMetadata() {
+	path := fmt.Sprintf("%v/json", buildDir)
+	outFile, err := os.Create(filepath.Join(path, filepath.Base("_metadata.json")))
 	defer func(outFile *os.File) {
 		err = outFile.Close()
 		if err != nil {
 			return
 		}
 	}(outFile)
-	if err != nil {
-		return nil, err
-	}
-	return outFile, nil
-}
-
-func writeFullMetadata() {
-	path := fmt.Sprintf("%v/json", buildDir)
-	outFile, err := os.Create(filepath.Join(path, filepath.Base("_metadata.json")))
 	fatality(err)
 	file, err := json.MarshalIndent(metadataSlice, "", " ")
 	fatality(err)
@@ -545,6 +529,18 @@ func dnaHash(dna string) (string, error) {
 	h := sha1.New()
 	h.Write([]byte(dna))
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func resetBuildDirectory(path string) error {
+	err := os.RemoveAll(path)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(path, os.FileMode(fmCode))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func fatality(e error) {

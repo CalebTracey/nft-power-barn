@@ -1,7 +1,7 @@
 package generate
 
 import (
-	"generatecollection/pkg/facade"
+	"gitlab.com/CalebTracey/nft-power-barn/pkg/facade"
 )
 
 type ServiceI interface {

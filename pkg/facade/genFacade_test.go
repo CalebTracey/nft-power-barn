@@ -1,9 +1,8 @@
 package facade
 
 import (
-	"flag"
 	"fmt"
-	"generatecollection/pkg/config"
+	"gitlab.com/CalebTracey/nft-power-barn/pkg/config"
 	"image"
 	"image/png"
 	"os"
@@ -12,7 +11,7 @@ import (
 )
 
 func Test_getElements(t *testing.T) {
-	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/pkg/layers/_Test_"
+	baseDir := "gitlab.com/CalebTracey/nft-power-barn/pkg/facade/testdata/layers"
 	tests := []struct {
 		name     string
 		path     string
@@ -283,37 +282,4 @@ func readTestFile() (*image.Image, error) {
 		return nil, err
 	}
 	return &decoded, nil
-}
-
-func Test_writeFile(t *testing.T) {
-	var size = flag.Int("size", 8, "file size in GiB")
-	path := "/Users/calebtracey/GolandProjects/generatecollection/pkg/facade/testdata/build/images"
-	flag.Parse()
-	type args struct {
-		fSize    int64
-		fileName string
-		dir      string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Happy Path",
-			args: args{
-				fSize:    int64(*size) * (1024 * 1024 * 1024),
-				fileName: "test.png",
-				dir:      path,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := writeImage(tt.args.fileName, tt.args.fileName, tt.args.dir); (err != nil) != tt.wantErr {
-				t.Errorf("writeFile() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
 }

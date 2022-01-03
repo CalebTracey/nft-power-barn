@@ -1,8 +1,10 @@
 package main
 
 import (
-	"generatecollection/pkg/facade"
-	"generatecollection/pkg/services/generate"
+	//"generatecollection/pkg/facade"
+	//"generatecollection/pkg/facade"
+	"gitlab.com/CalebTracey/nft-power-barn/pkg/facade"
+	"gitlab.com/CalebTracey/nft-power-barn/pkg/services/generate"
 	"log"
 )
 

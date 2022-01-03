@@ -1,6 +1,6 @@
 package routes
 
-import "generatecollection/pkg/facade"
+import "gitlab.com/CalebTracey/nft-power-barn/pkg/facade"
 
 type Handler struct {
 	Service facade.GenService

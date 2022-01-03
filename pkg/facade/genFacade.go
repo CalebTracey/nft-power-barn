@@ -5,7 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"generatecollection/pkg/config"
+	"gitlab.com/CalebTracey/nft-power-barn/pkg/config"
 	"image"
 	"image/draw"
 	"image/png"
@@ -90,55 +90,53 @@ func (s *GenService) StartCreating() {
 	log.Println("Processing configs...")
 
 	for _, conf := range allConfigs {
-		err := s.layersSetup(conf.LayerOrder)
+		setupErr := s.layersSetup(conf.LayerOrder)
 
-		if err != nil {
-			log.Panicf(err.Error())
+		if setupErr != nil {
+			log.Panicf(setupErr.Error())
 			return
 		}
 		for editionCount <= conf.EditionSize {
 			newDna := s.createDna()
 			if isDnaUnique(dnaList, newDna) {
-				// initialize new i
 				src := image.NewRGBA(image.Rect(0, 0, 1600, 1600))
 				bounds := src.Bounds()
 				newImage := image.NewRGBA(bounds)
 				s.Image = newImage
+
 				results := constructLayerToDna(newDna, s.Elements.layers)
-				addAttributes(results, editionCount)
-				var wg sync.WaitGroup
-				var imgMap = make(map[int]image.Image, len(results))
-
-				for i, layer := range results {
-					deco := make(chan image.Image)
-					wg.Add(1)
-
-					go func() {
-						defer wg.Done()
-						img, err := s.loadLayerImage(layer, deco)
-						fatality(err)
-						deco <- img
-						wg.Done()
-					}()
-					imgMap[i] = <-deco
-				}
-
-				for _, val := range imgMap {
-					s.addLayer(val)
-				}
-				err = saveImageFile(s.Image, editionCount)
+				dna, err := dnaHash(newDna)
 				fatality(err)
-				h := sha1.New()
-				h.Write([]byte(newDna))
-				dnaHash := fmt.Sprintf("%x", h.Sum(nil))
-				//err = saveImageFile(s.Image, abstractedIndexes[0])
-				//fatality(err)
-				//addMetadata(dnaHash, abstractedIndexes[0])
-				//err = saveMetadata(abstractedIndexes[0])
-				//fatality(err)
 
-				log.Printf("Created edition: %v, with DNA: %v", abstractedIndexes[0], dnaHash)
-				dnaList[abstractedIndexes[0]] = dnaHash
+				addAttributes(results, editionCount)
+				addMetadata(dna, abstractedIndexes[0])
+				var wg sync.WaitGroup
+				work := make(chan []image.Image)
+
+				wg.Add(1)
+				go func() {
+					s.loadImages(work, results)
+
+				}()
+
+				consumer := <-work
+				go func() {
+					defer wg.Done()
+					for i := range consumer {
+						s.drawLayer(consumer[i])
+					}
+				}()
+
+				wg.Wait()
+				go func() {
+					imgErr := saveImageFile(s.Image, editionCount)
+					fatality(imgErr)
+					metaErr := saveMetadata(editionCount)
+					fatality(metaErr)
+				}()
+
+				log.Printf("Created edition: %v, with DNA: %v", abstractedIndexes[0], dna)
+				dnaList[abstractedIndexes[0]] = dna
 				editionCount = editionCount + 1
 				abstractedIndexes = abstractedIndexes[1:]
 			} else {
@@ -239,16 +237,17 @@ func (s *GenService) getElements(path string) (res []Element, err error) {
 	return res, nil
 }
 
-//
-//func (s *GenService) loadImages(work chan image.Image, results []LayerToDnaResults) {
-//	for _, layer := range results {
-//		decoded, err := s.loadLayerImage(layer)
-//		fatality(err)
-//		work <- decoded
-//	}
-//}
+func (s *GenService) loadImages(work chan []image.Image, results []LayerToDnaResults) {
+	var temp []image.Image
+	for _, layer := range results {
+		decoded, err := s.loadLayerImage(layer)
+		fatality(err)
+		temp = append(temp, decoded)
+	}
+	work <- temp
+}
 
-func (s *GenService) loadLayerImage(layer LayerToDnaResults, deco chan image.Image) (image.Image, error) {
+func (s *GenService) loadLayerImage(layer LayerToDnaResults) (image.Image, error) {
 	img, err := os.OpenFile(layer.SelectedElement.Path, os.O_RDWR|os.O_CREATE, defaultBufSize)
 	defer func(img *os.File) {
 		e := img.Close()
@@ -267,7 +266,6 @@ func (s *GenService) loadLayerImage(layer LayerToDnaResults, deco chan image.Ima
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode file opened at path: %v. %v", layer.SelectedElement.Path, err)
 	}
-	deco <- decoded
 	return decoded, nil
 }
 
@@ -394,7 +392,7 @@ func findAttributes(idx int) ([]Attributes, error) {
 	return abs, nil
 }
 
-func (s *GenService) addLayer(img image.Image) {
+func (s *GenService) drawLayer(img image.Image) {
 	pointVal := image.Point{X: 1600, Y: 1600}
 	mask := &image.Rectangle{
 		Min: image.Point{},
@@ -538,6 +536,15 @@ func writeFullMetadata() {
 	fatality(err)
 	err = ioutil.WriteFile(outFile.Name(), file, os.FileMode(fmCode))
 	fatality(err)
+}
+
+func dnaHash(dna string) (string, error) {
+	if dna == "" {
+		return "", fmt.Errorf("missing DNA")
+	}
+	h := sha1.New()
+	h.Write([]byte(dna))
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func fatality(e error) {

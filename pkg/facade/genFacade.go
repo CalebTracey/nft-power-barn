@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/draw"
 	"image/png"
-	"sync"
 	"time"
 
 	"io/fs"
@@ -94,6 +93,7 @@ func (s *GenService) StartCreating() {
 	layerConfigs := config.Layers()
 	allConfigs := layerConfigs.All
 	abstractedIndexes := make([]int, 0)
+
 	for i := 1; i <= allConfigs[0].EditionSize; i++ {
 		abstractedIndexes = append(abstractedIndexes, i)
 	}
@@ -108,6 +108,7 @@ func (s *GenService) StartCreating() {
 		}
 		for editionCount <= conf.EditionSize {
 			newDna := s.createDna()
+
 			if isDnaUnique(dnaList, newDna) {
 				src := image.NewRGBA(image.Rect(0, 0, 1600, 1600))
 				bounds := src.Bounds()
@@ -120,25 +121,27 @@ func (s *GenService) StartCreating() {
 				addAttributes(results, editionCount)
 				addMetadata(dna, abstractedIndexes[0])
 
-				var wg sync.WaitGroup
 				layerCount := len(conf.LayerOrder) - 1
 				work := make(chan []image.Image, layerCount-ignoredCount)
+				done := make(chan bool)
 
-				wg.Add(1)
 				go func() {
-					s.loadImages(work, results)
+					defer close(work)
+					err = s.loadImages(work, results)
+					fatality(err)
 				}()
 				consumer := <-work
+
 				go func() {
-					defer wg.Done()
-					for i := range consumer {
-						s.drawLayer(consumer[i])
-					}
+					defer close(done)
+					s.drawLayers(consumer)
+					done <- true
 				}()
-				wg.Wait()
+				<-done
 
 				img := make(chan bool)
 				js := make(chan bool)
+
 				s.saveNft(abstractedIndexes[0], img, js)
 				<-img
 				<-js
@@ -164,17 +167,21 @@ func (s *GenService) StartCreating() {
 
 func (s *GenService) saveNft(id int, imageDone chan bool, jsonDone chan bool) {
 	go func() {
-		defer close(imageDone)
 		imgErr := saveImageFile(s.Image, id)
 		fatality(imgErr)
 		imageDone <- true
 	}()
 	go func() {
-		defer close(jsonDone)
 		metaErr := saveMetadata(id)
 		fatality(metaErr)
 		jsonDone <- true
 	}()
+}
+
+func (s *GenService) drawLayers(consumer []image.Image) {
+	for i := range consumer {
+		s.drawLayer(consumer[i])
+	}
 }
 
 func (s *GenService) layersSetup(layers []config.Layer) error {
@@ -203,64 +210,63 @@ func (s *GenService) getElements(path string) (res []Element, err error) {
 		return res, err
 	}
 	err = filepath.Walk(buildDir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
 		if !info.IsDir() {
 			fileInfo[path] = info
 		}
 		return nil
 	})
-
 	if err != nil {
-		return res, err
+		return nil, err
 	}
 	str1, _ := regexp.Compile("(^|\\/)\\.[^\\/\\.]/g")
 	str2, _ := regexp.Compile(".DS_Store")
-	for i, item := range items {
-		if !str1.MatchString(item.Name()) && !str2.MatchString(item.Name()) {
+	for i := range items {
+		name := items[i].Name()
+		if !str1.MatchString(name) && !str2.MatchString(name) {
 			res = append(res, Element{
 				Id:       i,
-				Name:     cleanName(item.Name()),
-				FileName: item.Name(),
-				Weight:   getRarityWeight(item.Name()),
-				Path:     fmt.Sprintf("%v/%v", path, item.Name()),
+				Name:     cleanName(name),
+				FileName: name,
+				Weight:   getRarityWeight(name),
+				Path:     fmt.Sprintf("%v/%v", path, name),
 			})
 		}
 	}
 	return res, nil
 }
 
-func (s *GenService) loadImages(work chan []image.Image, results []LayerToDnaResults) {
+func (s *GenService) loadImages(work chan []image.Image, results []LayerToDnaResults) error {
 	var temp []image.Image
-	for _, layer := range results {
-		decoded, err := s.loadLayerImage(layer)
-		fatality(err)
+	for r := range results {
+		decoded, err := s.loadLayerImage(results[r])
+		if err != nil {
+			log.Panic(err)
+		}
 		temp = append(temp, decoded)
 	}
 	work <- temp
+	return nil
 }
 
 func (s *GenService) loadLayerImage(layer LayerToDnaResults) (image.Image, error) {
-	img, err := os.OpenFile(layer.SelectedElement.Path, os.O_RDWR|os.O_CREATE, defaultBufSize)
+	f, err := os.OpenFile(layer.SelectedElement.Path, os.O_RDWR|os.O_CREATE, defaultBufSize)
 	defer func(img *os.File) {
 		e := img.Close()
 		if e != nil {
 			log.Panic(e)
 			return
 		}
-	}(img)
-	type Result struct {
-		Image image.Image
-	}
+	}(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file at build: %v. %v", layer.SelectedElement.Path, err)
 	}
-	decoded, err := png.Decode(img)
+
+	img, err := png.Decode(f)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode file opened at build: %v. %v", layer.SelectedElement.Path, err)
 	}
-	return decoded, nil
+
+	return img, nil
 }
 
 func getRarityWeight(str string) int {
@@ -308,9 +314,9 @@ func isDnaUnique(list map[int]string, newDna string) bool {
 }
 
 func constructLayerToDna(dna string, layers []LayerElement) (res []LayerToDnaResults) {
-	for i, layer := range layers {
+	for i := range layers {
 		elementId, err := cleanDna(&strings.Split(dna, dnaDelimiter)[i])
-
+		layer := layers[i]
 		for _, e := range layer.Elements {
 			if err != nil {
 				log.Printf("dna error: %v", dna)
@@ -355,8 +361,9 @@ func removeQueryStrings(dna string) string {
 func addAttributes(results []LayerToDnaResults, idx int) {
 	ig := config.IgnoredData()
 	var abs []Attributes
-	for _, layer := range results {
+	for i := range results {
 		var igTrait bool
+		layer := results[i]
 		name := strings.TrimSpace(layer.Name)
 		trait := strings.TrimSpace(layer.SelectedElement.Name)
 		for _, t := range ig.Traits {
@@ -416,12 +423,15 @@ func saveImageFile(newImg *image.RGBA, edition int) error {
 		return err
 	}
 
-	buff := new(bytes.Buffer)
-	err = png.Encode(buff, newImg)
+	buf := bytes.Buffer{}
+
+	encoder := png.Encoder{CompressionLevel: png.NoCompression}
+	err = encoder.Encode(&buf, newImg)
 	if err != nil {
 		return err
 	}
-	_, err = outFile.Write(buff.Bytes())
+
+	_, err = outFile.Write(buf.Bytes())
 	if err != nil {
 		return err
 	}

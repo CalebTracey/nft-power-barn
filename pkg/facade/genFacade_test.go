@@ -4,67 +4,76 @@ import (
 	"fmt"
 	"gitlab.com/CalebTracey/nft-power-barn/pkg/config"
 	"image"
-	"image/png"
 	"os"
 	"reflect"
 	"testing"
 )
 
-//
-//func Test_getElements(t *testing.T) {
-//	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/testing/layers"
-//	tests := []struct {
-//		name     string
-//		build     string
-//		elements *Elements
-//		wantRes  []Element
-//		wantErr  bool
-//	}{
-//		{
-//			name:     "Happy Path",
-//			build:     baseDir,
-//			elements: &Elements{},
-//			wantErr:  false,
-//			wantRes: []Element{
-//				{
-//					Id:       0,
-//					Name:     "Blue Green ",
-//					FileName: "Blue Green #50.png",
-//					Weight:   50,
-//					Path:     fmt.Sprintf("%v/Blue Green #50.png", baseDir),
-//				}, {
-//					Id:       1,
-//					Name:     "Cadet Blue ",
-//					FileName: "Cadet Blue #50.png",
-//					Weight:   50,
-//					Path:     fmt.Sprintf("%v/Cadet Blue #50.png", baseDir),
-//				}, {
-//					Id:       2,
-//					Name:     "Cadet Blue ",
-//					FileName: "Cadet Blue #60.png",
-//					Weight:   60,
-//					Path:     fmt.Sprintf("%v/Cadet Blue #60.png", baseDir),
-//				},
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			s := &GenService{
-//				Elements: *tt.elements,
-//			}
-//			gotRes, err := s.getElements(tt.build)
-//
-//			if (err != nil) != tt.wantErr {
-//				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
-//				return
-//			}
-//			if !reflect.DeepEqual(gotRes, tt.wantRes) {
-//				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
-//			}
-//		})
-//	}
-//}
+func TestGenService_getElements(t *testing.T) {
+	wd, _ := os.Getwd()
+	basePath := fmt.Sprintf("%v/test", wd)
+	type fields struct {
+		Elements    Elements
+		Image       *image.RGBA
+		ImageLayers []image.Image
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		path    string
+		wantRes []Element
+		wantErr bool
+	}{
+		{
+			name: "Happy Path",
+			fields: fields{
+				Elements:    Elements{},
+				Image:       nil,
+				ImageLayers: nil,
+			},
+			path:    basePath,
+			wantErr: false,
+			wantRes: []Element{
+				{
+					Id:       0,
+					Name:     "Blue Green ",
+					FileName: "Blue Green #50.png",
+					Weight:   50,
+					Path:     fmt.Sprintf("%v/test/Blue Green #50.png", basePath),
+				}, {
+					Id:       1,
+					Name:     "Cadet Blue ",
+					FileName: "Cadet Blue #50.png",
+					Weight:   50,
+					Path:     fmt.Sprintf("%v/test/Cadet Blue #50.png", basePath),
+				}, {
+					Id:       2,
+					Name:     "Cadet Blue ",
+					FileName: "Cadet Blue #60.png",
+					Weight:   60,
+					Path:     fmt.Sprintf("%v/test/Cadet Blue #60.png", basePath),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &GenService{
+				Elements:    tt.fields.Elements,
+				Image:       tt.fields.Image,
+				ImageLayers: tt.fields.ImageLayers,
+			}
+			gotRes, err := s.getElements(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRes, tt.wantRes) {
+				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}
 
 func Test_getRarityWeight(t *testing.T) {
 	tests := []struct {
@@ -245,107 +254,58 @@ func Test_saveImageFile(t *testing.T) {
 	}
 }
 
-//func BenchmarkTest_saveImageFile(b *testing.B) {
-//	src := image.NewRGBA(image.Rect(0, 0, 1600, 1600))
-//	bounds := src.Bounds()
-//	testImg := image.NewRGBA(bounds)
 //
-//	tests := []struct{
-//		name string
-//		newImg *image.RGBA
-//		edition int
+//func TestGenService_loadImages(t *testing.T) {
+//	var testImg *image.RGBA
+//	type fields struct {
+//		Elements    Elements
+//		Image       *image.RGBA
+//		ImageLayers []image.Image
+//	}
+//	tests := []struct {
+//		name    string
+//		fields  fields
+//		work    chan []image.Image
+//		results []LayerToDnaResults
 //	}{
 //		{
-//			name: "Single File Benchmark",
-//			newImg: testImg,
-//			edition: 1,
+//			name: "Happy Path",
+//			fields: fields{
+//				Elements:    Elements{},
+//				Image:       testImg,
+//				ImageLayers: []image.Image{},
+//			},
+//			work:    make(chan []image.Image),
+//			results: []LayerToDnaResults{},
 //		},
 //	}
-//	b.Run("Single File Benchmark", func(b *testing.B) {
-//
-//	})
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			s := &GenService{
+//				Elements:    tt.fields.Elements,
+//				Image:       tt.fields.Image,
+//				ImageLayers: tt.fields.ImageLayers,
+//			}
+//		})
+//	}
 //}
 
-func readTestFile() (*image.Image, error) {
-	testPath := "/Users/calebtracey/GolandProjects/generatecollection/layers/_Test_"
-	img, err := os.Open(fmt.Sprintf("%v/Blue Green #50", testPath))
-	defer func(img *os.File) {
-		e := img.Close()
-		if e != nil {
-			return
-		}
-	}(img)
-	if err != nil {
-		return nil, err
-	}
-	decoded, err := png.Decode(img)
-	if err != nil {
-		return nil, err
-	}
-	return &decoded, nil
-}
-
-func TestGenService_getElements(t *testing.T) {
-	wd, _ := os.Getwd()
-	basePath := fmt.Sprintf("%v/test", wd)
-	type fields struct {
-		Elements    Elements
-		Image       *image.RGBA
-		ImageLayers []image.Image
+func Test_saveImageFile1(t *testing.T) {
+	type args struct {
+		newImg  *image.RGBA
+		edition int
 	}
 	tests := []struct {
 		name    string
-		fields  fields
-		path    string
-		wantRes []Element
+		args    args
 		wantErr bool
 	}{
-		{
-			name: "Happy Path",
-			fields: fields{
-				Elements:    Elements{},
-				Image:       nil,
-				ImageLayers: nil,
-			},
-			path:    basePath,
-			wantErr: false,
-			wantRes: []Element{
-				{
-					Id:       0,
-					Name:     "Blue Green ",
-					FileName: "Blue Green #50.png",
-					Weight:   50,
-					Path:     fmt.Sprintf("%v/test/Blue Green #50.png", basePath),
-				}, {
-					Id:       1,
-					Name:     "Cadet Blue ",
-					FileName: "Cadet Blue #50.png",
-					Weight:   50,
-					Path:     fmt.Sprintf("%v/test/Cadet Blue #50.png", basePath),
-				}, {
-					Id:       2,
-					Name:     "Cadet Blue ",
-					FileName: "Cadet Blue #60.png",
-					Weight:   60,
-					Path:     fmt.Sprintf("%v/test/Cadet Blue #60.png", basePath),
-				},
-			},
-		},
+		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &GenService{
-				Elements:    tt.fields.Elements,
-				Image:       tt.fields.Image,
-				ImageLayers: tt.fields.ImageLayers,
-			}
-			gotRes, err := s.getElements(tt.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getElements() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotRes, tt.wantRes) {
-				t.Errorf("getElements() gotRes = %v, want %v", gotRes, tt.wantRes)
+			if err := saveImageFile(tt.args.newImg, tt.args.edition); (err != nil) != tt.wantErr {
+				t.Errorf("saveImageFile() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

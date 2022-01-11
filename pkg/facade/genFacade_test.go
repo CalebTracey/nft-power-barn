@@ -97,7 +97,7 @@ func Test_getRarityWeight(t *testing.T) {
 }
 
 func TestGenService_layersSetup(t *testing.T) {
-	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/pkg/layers/_Test_"
+	baseDir := "/Users/calebtracey/GolandProjects/nft-power-barn/pkg/layers/_Test_"
 	type fields struct {
 		Elements *Elements
 	}
@@ -170,7 +170,7 @@ func TestGenService_layersSetup(t *testing.T) {
 }
 
 func TestGenService_createDna(t *testing.T) {
-	baseDir := "/Users/calebtracey/GolandProjects/generatecollection/pkg/layers/_Test_"
+	baseDir := "/Users/calebtracey/GolandProjects/nft-power-barn/pkg/layers/_Test_"
 	type fields struct {
 		Elements *Elements
 		Image    *image.RGBA
@@ -250,63 +250,6 @@ func Test_saveImageFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-		})
-	}
-}
-
-//
-//func TestGenService_loadImages(t *testing.T) {
-//	var testImg *image.RGBA
-//	type fields struct {
-//		Elements    Elements
-//		Image       *image.RGBA
-//		ImageLayers []image.Image
-//	}
-//	tests := []struct {
-//		name    string
-//		fields  fields
-//		work    chan []image.Image
-//		results []LayerToDnaResults
-//	}{
-//		{
-//			name: "Happy Path",
-//			fields: fields{
-//				Elements:    Elements{},
-//				Image:       testImg,
-//				ImageLayers: []image.Image{},
-//			},
-//			work:    make(chan []image.Image),
-//			results: []LayerToDnaResults{},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			s := &GenService{
-//				Elements:    tt.fields.Elements,
-//				Image:       tt.fields.Image,
-//				ImageLayers: tt.fields.ImageLayers,
-//			}
-//		})
-//	}
-//}
-
-func Test_saveImageFile1(t *testing.T) {
-	type args struct {
-		newImg  *image.RGBA
-		edition int
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := saveImageFile(tt.args.newImg, tt.args.edition); (err != nil) != tt.wantErr {
-				t.Errorf("saveImageFile() error = %v, wantErr %v", err, tt.wantErr)
-			}
 		})
 	}
 }

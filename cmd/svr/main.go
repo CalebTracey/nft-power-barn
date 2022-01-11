@@ -23,12 +23,8 @@ func main() {
 	defer deathScream()
 
 	gSvc := facade.NewGenService()
-	nftSvc := facade.NewNftPortService()
-	ipfsSvc := facade.NewIpfsService()
 	handler := routes.Handler{
-		GenService:     gSvc,
-		NftPortService: &nftSvc,
-		IpfsService:    ipfsSvc,
+		GenService: gSvc,
 	}
 	router := handler.InitializeRoutes()
 

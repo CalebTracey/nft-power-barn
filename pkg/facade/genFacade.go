@@ -11,7 +11,6 @@ import (
 	"image/png"
 	"time"
 
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -48,7 +47,13 @@ type Elements struct {
 	layerImages []ImageResponse
 }
 
-func init() {
+func NewGenService() GenService {
+	return GenService{
+		Elements: Elements{},
+	}
+}
+
+func (s *GenService) StartCreating() ([]Metadata, error) {
 	conf := config.InitializeConfig()
 	path, err := os.Getwd()
 	if err != nil {
@@ -79,17 +84,10 @@ func init() {
 	failedCount = 0
 	layerConfigIdx = 0
 	editionCount = 1
-}
-
-func NewService() GenService {
-	return GenService{
-		Elements: Elements{},
-	}
-}
-
-func (s *GenService) StartCreating() {
 	start := time.Now()
-	log.Println("And we're off!")
+	sm := fmt.Sprintln("And we're off!")
+	log.Println(sm)
+
 	layerConfigs := config.Layers()
 	allConfigs := layerConfigs.All
 	abstractedIndexes := make([]int, 0)
@@ -97,14 +95,13 @@ func (s *GenService) StartCreating() {
 	for i := 1; i <= allConfigs[0].EditionSize; i++ {
 		abstractedIndexes = append(abstractedIndexes, i)
 	}
-	log.Println("Processing configs...")
 
+	log.Println("Processing configs...")
 	for _, conf := range allConfigs {
 		setupErr := s.layersSetup(conf.LayerOrder)
 
 		if setupErr != nil {
-			log.Panicf(setupErr.Error())
-			return
+			return nil, fmt.Errorf(setupErr.Error())
 		}
 		for editionCount <= conf.EditionSize {
 			newDna := s.createDna()
@@ -130,6 +127,7 @@ func (s *GenService) StartCreating() {
 					err = s.loadImages(work, results)
 					fatality(err)
 				}()
+
 				consumer := <-work
 
 				go func() {
@@ -146,15 +144,23 @@ func (s *GenService) StartCreating() {
 				<-img
 				<-js
 
-				log.Printf("Created edition: %v, with DNA: %v", abstractedIndexes[0], dna)
+				imgErr := saveImageFile(s.Image, abstractedIndexes[0])
+				fatality(imgErr)
+
+				metaErr := saveMetadata(abstractedIndexes[0])
+				fatality(metaErr)
+
+				sm = fmt.Sprintf("Created edition: %v, with DNA: %v", abstractedIndexes[0], dna)
+				log.Println(sm)
 				dnaList[abstractedIndexes[0]] = dna
 				editionCount = editionCount + 1
 				abstractedIndexes = abstractedIndexes[1:]
+
 			} else {
 				log.Println("DNA Exists!")
 				failedCount++
 				if failedCount >= uniqueDnaTorrence {
-					log.Fatalf("You need more layers or elements to grow your edition to %v works", conf.EditionSize)
+					return nil, fmt.Errorf("you need more layers or elements to grow your edition to %v works", conf.EditionSize)
 				}
 			}
 		}
@@ -163,6 +169,8 @@ func (s *GenService) StartCreating() {
 	writeFullMetadata()
 	dur := fmt.Sprintf("%.2f", time.Since(start).Seconds())
 	log.Printf("Finished in %v seconds", dur)
+
+	return metadataSlice, nil
 }
 
 func (s *GenService) saveNft(id int, imageDone chan bool, jsonDone chan bool) {
@@ -203,35 +211,35 @@ func (s *GenService) layersSetup(layers []config.Layer) error {
 	return nil
 }
 
-func (s *GenService) getElements(path string) (res []Element, err error) {
-	var fileInfo = make(map[string]fs.FileInfo)
-	items, err := ioutil.ReadDir(path)
-	if err != nil {
-		return res, err
-	}
-	err = filepath.Walk(buildDir, func(path string, info fs.FileInfo, err error) error {
-		if !info.IsDir() {
-			fileInfo[path] = info
+func (s *GenService) getElements(elementDir string) (res []Element, err error) {
+	work := make(chan []string)
+	done := make(chan bool)
+
+	go func() {
+		defer close(work)
+		err = readDirFileNames(elementDir, work)
+		if err != nil {
+			log.Fatalln(err)
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
+		done <- true
+	}()
+
+	names := <-work
 	str1, _ := regexp.Compile("(^|\\/)\\.[^\\/\\.]/g")
 	str2, _ := regexp.Compile(".DS_Store")
-	for i := range items {
-		name := items[i].Name()
+	for i := range names {
+		name := names[i]
 		if !str1.MatchString(name) && !str2.MatchString(name) {
 			res = append(res, Element{
 				Id:       i,
 				Name:     cleanName(name),
 				FileName: name,
 				Weight:   getRarityWeight(name),
-				Path:     fmt.Sprintf("%v/%v", path, name),
+				Path:     fmt.Sprintf("%v/%v", elementDir, name),
 			})
 		}
 	}
+	<-done
 	return res, nil
 }
 
@@ -265,7 +273,6 @@ func (s *GenService) loadLayerImage(layer LayerToDnaResults) (image.Image, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode file opened at build: %v. %v", layer.SelectedElement.Path, err)
 	}
-
 	return img, nil
 }
 
@@ -424,8 +431,8 @@ func saveImageFile(newImg *image.RGBA, edition int) error {
 	}
 
 	buf := bytes.Buffer{}
-
 	encoder := png.Encoder{CompressionLevel: png.NoCompression}
+	//encoder := png.Encoder{CompressionLevel: png.BestSpeed}
 	err = encoder.Encode(&buf, newImg)
 	if err != nil {
 		return err
@@ -459,10 +466,11 @@ func addMetadata(dna string, edition int) {
 		FileUrl:     conf.FileUrl,
 		Creator:     conf.Creator,
 		CustomFields: CustomFields{
-			DNA:      dna,
-			Edition:  edition,
-			Date:     fmt.Sprint(time.Now().Date()),
-			Compiler: "Caleb's NFT Power Barn",
+			DNA:        dna,
+			Edition:    edition,
+			Generation: 1,
+			Date:       fmt.Sprint(time.Now().Date()),
+			Compiler:   "Caleb's NFT Power Barn",
 		},
 		Attributes: attributes,
 	}
@@ -495,6 +503,7 @@ func saveMetadataFile(m Metadata, edition int) error {
 	if err != nil {
 		return err
 	}
+
 	buff := new(bytes.Buffer)
 	enc := json.NewEncoder(buff)
 	enc.SetIndent("", "    ")
@@ -550,6 +559,24 @@ func resetBuildDirectory(path string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func readDirFileNames(dir string, work chan []string) error {
+	var temp []string
+	f, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	fileInfo, err := f.Readdir(-1)
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	for _, file := range fileInfo {
+		temp = append(temp, file.Name())
+	}
+	work <- temp
 	return nil
 }
 

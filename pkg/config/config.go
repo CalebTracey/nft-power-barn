@@ -10,7 +10,7 @@ func InitializeConfig() GenerateConfig {
 
 func Layers() (conf LayerConfigurations) {
 	layerConfig1 := LayerConfig{
-		EditionSize: 5,
+		EditionSize: 2,
 		LayerOrder: append(make([]Layer, 0),
 			Layer{"Background Color"},
 			Layer{"Background Noise"},

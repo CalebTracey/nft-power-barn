@@ -3,17 +3,18 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"gitlab.com/CalebTracey/nft-power-barn/pkg/facade"
 	"os"
 	"os/signal"
 
-	//"generatecollection/pkg/facade"
-	//"generatecollection/pkg/facade"
 	"gitlab.com/CalebTracey/nft-power-barn/pkg/routes"
 	"log"
 	"net/http"
 	"time"
 )
+
+const Port = 8080
 
 func main() {
 	var wait time.Duration
@@ -21,30 +22,37 @@ func main() {
 	flag.Parse()
 	defer deathScream()
 
-	service := facade.NewService()
+	gSvc := facade.NewGenService()
+	nftSvc := facade.NewNftPortService()
+	ipfsSvc := facade.NewIpfsService()
 	handler := routes.Handler{
-		Service: service,
+		GenService:     gSvc,
+		NftPortService: &nftSvc,
+		IpfsService:    ipfsSvc,
 	}
-
 	router := handler.InitializeRoutes()
 
 	srv := &http.Server{
-		Addr: "0.0.0.0:8080",
-		// Good practice to set timeouts to avoid Slowloris attacks.
-		WriteTimeout: time.Second * 15,
-		ReadTimeout:  time.Second * 15,
-		IdleTimeout:  time.Second * 60,
+		Addr:         fmt.Sprintf("0.0.0.0:%v", Port),
+		WriteTimeout: time.Second * 30,
+		ReadTimeout:  time.Second * 30,
+		IdleTimeout:  time.Second * 120,
 		Handler:      router, // Pass our instance of gorilla/mux in.
 	}
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Println(err)
-	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	msg := fmt.Sprintf("Listening on Port: %v", Port)
+	fmt.Println("\033[36m", msg, "\033[0m")
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
 	<-c
-
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
 	_ = srv.Shutdown(ctx)
